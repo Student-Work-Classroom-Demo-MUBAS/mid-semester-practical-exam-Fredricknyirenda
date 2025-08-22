@@ -77,16 +77,15 @@ app.post('/enroll', [
   const { studentName, studentId, courseCode } = req.body;
   // ... further processing
   //res.send('Form submitted successfully!');
-  req.session.formData = req.body;
-  res.redirect('/enrollments');
+  res.redirect(`/enrollments?studentName=${studentName}&studentId=${studentId}&courseCode=${courseCode}`);
 });
 // Server-rendered enrollments list (no JSON)
 app.get('/enrollments', (req, res) => {
-  console.log(req.body.studentName)
+  const { studentName, studentId, courseCode } = req.query;
   const rows = enrollments.map((e, i) => `
     <tr>
       <td>${i + 1}</td>
-      <td>${escape(e.studentName)}</td>
+      <td>${(req.query.studentName)}</td>
       <td>${escape(e.studentId)}</td>
       <td>${escape(e.courseCode)} — ${escape(e.courseName || '')}</td>
       <td>${escape(e.semester)}</td>
