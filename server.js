@@ -1,21 +1,27 @@
 // === MegaUniversity — Course Enrollment (Starter with TODOs) ===
 const express = require('express');
 const path = require('path');
-
+const { body, validationResult } = require('express-validator');
 const app = express();
+const session = require('express-session');
 const PORT = process.env.PORT || 3000;
 
 /* ===== Middleware (order matters) ===== */
 // Use built-in body parser for HTML forms
 app.use(express.urlencoded({ extended: true }));
+app.use(session({
+  secret: 'your_secret_key', // Replace with a strong, random secret
+  resave: false,
+  saveUninitialized: true
+}));
 
 /* ===== In-memory data ===== */
 const availableCourses = [
   { code: "CS401", name: "Advanced Web Development", instructor: "Dr. Smith", credits: 3, capacity: 30 },
-  { code: "CS402", name: "Database Systems",          instructor: "Dr. Patel", credits: 3, capacity: 35 },
-  { code: "CS403", name: "Software Engineering",      instructor: "Dr. Lee",   credits: 3, capacity: 40 },
-  { code: "CS404", name: "Computer Networks",         instructor: "Dr. Zhao",  credits: 3, capacity: 30 },
-  { code: "CS405", name: "Artificial Intelligence",   instructor: "Dr. Gomez", credits: 3, capacity: 25 }
+  { code: "CS402", name: "Database Systems", instructor: "Dr. Patel", credits: 3, capacity: 35 },
+  { code: "CS403", name: "Software Engineering", instructor: "Dr. Lee", credits: 3, capacity: 40 },
+  { code: "CS404", name: "Computer Networks", instructor: "Dr. Zhao", credits: 3, capacity: 30 },
+  { code: "CS405", name: "Artificial Intelligence", instructor: "Dr. Gomez", credits: 3, capacity: 25 }
 ];
 const enrollments = []; // { id, studentName, studentId, courseCode, courseName, semester, reason, enrollmentDate }
 let enrollmentIdCounter = 1;
@@ -37,7 +43,7 @@ const page = (title, body) => `<!doctype html>
   <footer class="footer"><small>Complete the TODOs in server.js, index.html, and style.css.</small></footer>
 </body></html>`;
 
-const escape = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const escape = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const studentIdOk = id => /^\d{4}-\d{4}$/.test(String(id || ''));
 const courseByCode = code => availableCourses.find(c => c.code === code);
@@ -45,12 +51,41 @@ const courseByCode = code => availableCourses.find(c => c.code === code);
 /* ===== Routes ===== */
 // Home -> static form (index.html)
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+//public index html 
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+//implementing enroll from form and validation
+app.post('/enroll', [
+  body('studentName')
+    .notEmpty().withMessage('StudenName is required')
+    .isLength({ min: 3 }).withMessage('StudentName must be at least 3 characters long'),
+  body('studentId')
+    .notEmpty().withMessage('studentId is required')
+    .isLength({ min: 3 }).withMessage('studentId must be format (YYYY-NNNN)'),
+  body('courseCode')
+    .notEmpty().withMessage('courseCode is required')
+    .isLength({ min: 3 }).withMessage('courseCode must be number and letters'),
+  body('semester')
+    .notEmpty().withMessage('semester is required')
+    .isLength({ min: 3 }).withMessage('courseCode must be number and letters'),
+], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
 
+  // If validation passes, process the form data
+  const { studentName, studentId, courseCode } = req.body;
+  // ... further processing
+  //res.send('Form submitted successfully!');
+  req.session.formData = req.body;
+  res.redirect('/enrollments');
+});
 // Server-rendered enrollments list (no JSON)
 app.get('/enrollments', (req, res) => {
+  console.log(req.body.studentName)
   const rows = enrollments.map((e, i) => `
     <tr>
-      <td>${i+1}</td>
+      <td>${i + 1}</td>
       <td>${escape(e.studentName)}</td>
       <td>${escape(e.studentId)}</td>
       <td>${escape(e.courseCode)} — ${escape(e.courseName || '')}</td>
